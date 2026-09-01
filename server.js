@@ -9,16 +9,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { extractFromUrl } from './src/extract.js';
-import { buildCard, ApiKeyError } from './src/claude.js';
-import { reconcileCard } from './src/reconcile.js';
+import { ApiKeyError } from './src/claude.js';
+import { validateBuildRequest, respondWithBuild } from './src/build.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(HERE, 'public');
 const PORT = Number(process.env.PORT) || 3000;
 const MAX_BODY = 30 * 1024 * 1024; // room for a few recipe photos
-const MAX_IMAGES = 4;
-const ALLOWED_MEDIA = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 const CONTENT_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -56,104 +53,10 @@ async function readBody(req) {
   }
 }
 
-function validate(body) {
-  const urls = (Array.isArray(body.urls) ? body.urls : [])
-    .map((u) => String(u || '').trim())
-    .filter(Boolean)
-    .slice(0, 5);
-
-  const pastedText = String(body.text || '').trim().slice(0, 40000);
-
-  const images = (Array.isArray(body.images) ? body.images : [])
-    .slice(0, MAX_IMAGES)
-    .map((image) => {
-      const mediaType = String(image?.mediaType || '').toLowerCase();
-      if (!ALLOWED_MEDIA.has(mediaType)) {
-        throw Object.assign(new Error(`Unsupported image type: ${mediaType || 'unknown'}`), { status: 400 });
-      }
-      const data = String(image?.data || '').replace(/^data:[^,]+,/, '');
-      if (!data) throw Object.assign(new Error('An image was empty.'), { status: 400 });
-      return { mediaType, data };
-    });
-
-  if (!urls.length && !pastedText && !images.length) {
-    throw Object.assign(new Error('Give me a recipe URL, a photo, or some pasted text.'), { status: 400 });
-  }
-
-  const servings = body.servings ? String(body.servings).slice(0, 12) : '';
-
-  return {
-    urls,
-    pastedText,
-    images,
-    servings,
-    includeStaples: body.includeStaples !== false,
-  };
-}
-
 async function handleBuild(req, res) {
   const body = await readBody(req);
-  const input = validate(body); // bad input still gets a proper 4xx
-
-  // The model can take a couple of minutes on a long recipe, which is longer
-  // than many proxies and tunnels will hold a silent connection. So commit to
-  // a 200 now and drip whitespace while working - leading whitespace is legal
-  // JSON, so the browser's JSON.parse never notices. Errors from here on ride
-  // inside the JSON body instead of the status code.
-  res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
-  const heartbeat = setInterval(() => {
-    if (!res.writableEnded) res.write(' ');
-  }, 10000);
-
-  try {
-    const recipes = [];
-    const warnings = [];
-
-    for (const url of input.urls) {
-      try {
-        const recipe = await extractFromUrl(url);
-        if (!recipe.structured) {
-          warnings.push(`${new URL(recipe.sourceUrl).hostname} has no structured recipe data - read from the page text, so check the list.`);
-        }
-        recipes.push(recipe);
-      } catch (error) {
-        warnings.push(`Could not read ${url}: ${error.message}`);
-      }
-    }
-
-    if (input.pastedText) {
-      recipes.push({ title: 'Pasted recipe', text: input.pastedText, structured: false, sourceUrl: null });
-    }
-
-    if (!recipes.length && !input.images.length) {
-      return res.end(JSON.stringify({ error: warnings.join(' ') || 'Nothing readable at that address.' }));
-    }
-
-    const { card: raw, degraded } = await buildCard({
-      recipes,
-      images: input.images,
-      servings: input.servings,
-      includeStaples: input.includeStaples,
-    });
-
-    const scale = Number(raw.scaleFactor);
-    const card = reconcileCard(raw, {
-      scale: Number.isFinite(scale) && scale > 0 && scale <= 50 ? scale : 1,
-      includeStaples: input.includeStaples,
-    });
-    card.sources = recipes.map((r) => r.sourceUrl).filter(Boolean);
-    card.warnings = warnings;
-    if (degraded) {
-      card.warnings.push('Structured output was unavailable on this key, so the list was parsed from free-form JSON.');
-    }
-
-    res.end(JSON.stringify({ card }));
-  } catch (error) {
-    console.error(error);
-    res.end(JSON.stringify({ error: error.message || 'Something went wrong.' }));
-  } finally {
-    clearInterval(heartbeat);
-  }
+  const input = validateBuildRequest(body); // bad input still gets a proper 4xx
+  await respondWithBuild(res, input);       // 200 + heartbeats from here on
 }
 
 async function serveStatic(req, res) {

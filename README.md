@@ -47,6 +47,20 @@ ANTHROPIC_API_KEY=sk-ant-... npm start
 Optional environment variables: `PORT` (default 3000) and `CLAUDE_MODEL`
 (default `claude-opus-5`).
 
+## Deploying
+
+**Vercel** - works zero-config: `public/` is served as the static site and
+`api/build.js` runs the API as a serverless function (`server.js` is not used
+there). Set `ANTHROPIC_API_KEY` under Project Settings -> Environment
+Variables, then redeploy. `vercel.json` asks for a 300 s function timeout,
+which needs Fluid compute (on by default for new projects); if your project
+predates it and the deploy complains, lower `maxDuration` to 60. Vercel also
+caps request bodies at ~4.5 MB - photos are downscaled in the browser first,
+so this rarely matters, but very many photos in one build may not fit.
+
+**Any Node host** - `npm start` runs `server.js`, which serves both the site
+and the API from one process.
+
 ## How it works
 
 ```
