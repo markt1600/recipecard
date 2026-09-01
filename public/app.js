@@ -10,9 +10,12 @@ const CATEGORY_ORDER = new Map(CATEGORIES.map((c, i) => [c, i]));
 
 const LINES_PER_CARD = 11;      // line-units on a 3x5 card, notes included
 const MAX_IMAGE_EDGE = 1568;    // Claude's optimal longest edge
-const KEY_STORAGE = 'recipecard.apikey';
 
 const $ = (selector) => document.querySelector(selector);
+
+$('#dateline').textContent = new Date().toLocaleDateString('en-US', {
+  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+});
 
 const state = {
   card: null,
@@ -94,21 +97,6 @@ function renderThumbs() {
   );
 }
 
-/* ------------------------------------------------------------- API key */
-
-const savedKey = localStorage.getItem(KEY_STORAGE);
-if (savedKey) $('#apikey').value = savedKey;
-
-fetch('/api/config')
-  .then((r) => r.json())
-  .then(({ hasServerKey }) => {
-    $('#key-row').hidden = hasServerKey;
-    $('#key-note').textContent = hasServerKey
-      ? 'Using the ANTHROPIC_API_KEY set on the server. The key never reaches this page.'
-      : 'The key is sent to this server only, to call the Anthropic API on your behalf. Set ANTHROPIC_API_KEY on the server to stop being asked.';
-  })
-  .catch(() => { $('#key-row').hidden = false; });
-
 /* ------------------------------------------------------------- build */
 
 $('#build').addEventListener('click', build);
@@ -121,10 +109,6 @@ async function build() {
   if (!urls.length && !text && !state.images.length) {
     return setStatus('Add a link, a photo, or some recipe text first.', true);
   }
-
-  const apiKey = $('#apikey').value.trim();
-  if (apiKey && $('#remember').checked) localStorage.setItem(KEY_STORAGE, apiKey);
-  if (!$('#remember').checked) localStorage.removeItem(KEY_STORAGE);
 
   button.disabled = true;
   setStatus('Reading the recipe, converting the measurements…');
@@ -139,7 +123,6 @@ async function build() {
         images: state.images.map(({ mediaType, data }) => ({ mediaType, data })),
         servings: $('#servings').value.trim(),
         includeStaples: $('#staples').checked,
-        apiKey: apiKey || undefined,
       }),
     });
     const body = await response.json();
@@ -171,6 +154,13 @@ function countItems() {
   return (state.card?.items.length || 0) + (state.card?.staples.length || 0);
 }
 
+function updateMeta() {
+  const meta = $('#output-meta');
+  if (meta && state.card) {
+    meta.textContent = `${countItems()} items · ${state.card.servings || 'as written'}`;
+  }
+}
+
 /* ------------------------------------------------------------- render */
 
 $('#show-notes').addEventListener('change', (event) => {
@@ -183,6 +173,7 @@ function render() {
   renderWarnings();
   renderCards();
   renderTrash();
+  updateMeta();
 }
 
 function renderWarnings() {
@@ -272,9 +263,9 @@ function buildCardElement({ items, label, sub, page, pages, kraft }) {
     small.textContent = sub;
     title.append(small);
   }
-  const signal = el('div', 'signal');
-  signal.append(el('i'), el('i'), el('i'));
-  head.append(title, el('div', 'card-rule'), signal);
+  const marker = el('span', 'card-page');
+  marker.textContent = pages > 1 ? `no. ${page} / ${pages}` : 'no. 1';
+  head.append(title, marker);
 
   const list = el('ul', 'card-lines');
   for (const item of items) list.append(buildLine(item));
@@ -285,8 +276,8 @@ function buildCardElement({ items, label, sub, page, pages, kraft }) {
   }
 
   const foot = el('div', 'card-foot');
-  foot.append(text('span', kraft ? 'staples' : 'shopping list'));
-  if (pages > 1) foot.append(text('span', `${page} / ${pages}`));
+  foot.append(text('span', kraft ? 'cupboard · check' : 'shopping · list'));
+  foot.append(text('span', `${items.length} item${items.length === 1 ? '' : 's'}`));
 
   card.append(head, list, foot);
   return card;

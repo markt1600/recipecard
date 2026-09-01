@@ -7,14 +7,11 @@ const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 
 export class ApiKeyError extends Error {}
 
-function makeClient(apiKey) {
-  const key = apiKey || process.env.ANTHROPIC_API_KEY;
-  if (!key) {
-    throw new ApiKeyError(
-      'No Anthropic API key. Set ANTHROPIC_API_KEY in the environment, or paste a key into the key box.',
-    );
+function makeClient() {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new ApiKeyError('ANTHROPIC_API_KEY is not set in the server environment.');
   }
-  return new Anthropic({ apiKey: key });
+  return new Anthropic(); // reads ANTHROPIC_API_KEY itself
 }
 
 function userContent({ recipes, images, servings, includeStaples }) {
@@ -90,8 +87,8 @@ function isUnsupportedFeature(error) {
  * if this account has neither beta enabled, it retries with a plain request and
  * a "reply with JSON" instruction so the app still works.
  */
-export async function buildCard({ recipes, images, servings, includeStaples, apiKey }) {
-  const client = makeClient(apiKey);
+export async function buildCard({ recipes, images, servings, includeStaples }) {
+  const client = makeClient();
   const messages = [{ role: 'user', content: userContent({ recipes, images, servings, includeStaples }) }];
 
   const base = {

@@ -88,7 +88,6 @@ function validate(body) {
     images,
     servings,
     includeStaples: body.includeStaples !== false,
-    apiKey: typeof body.apiKey === 'string' && body.apiKey.trim() ? body.apiKey.trim() : null,
   };
 }
 
@@ -124,7 +123,6 @@ async function handleBuild(req, res) {
     images: input.images,
     servings: input.servings,
     includeStaples: input.includeStaples,
-    apiKey: input.apiKey,
   });
 
   const scale = Number(raw.scaleFactor);
@@ -164,9 +162,6 @@ async function serveStatic(req, res) {
 
 const server = http.createServer(async (req, res) => {
   try {
-    if (req.method === 'GET' && req.url === '/api/config') {
-      return json(res, 200, { hasServerKey: Boolean(process.env.ANTHROPIC_API_KEY) });
-    }
     if (req.method === 'POST' && req.url === '/api/build') {
       return await handleBuild(req, res);
     }
@@ -184,6 +179,6 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`recipecard listening on http://localhost:${PORT}`);
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.log('No ANTHROPIC_API_KEY set - the page will ask for a key instead.');
+    console.warn('WARNING: ANTHROPIC_API_KEY is not set - /api/build will fail until it is.');
   }
 });

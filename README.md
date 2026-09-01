@@ -32,19 +32,14 @@ also copy the list as plain text or download it as JSON.
 
 ## Setup
 
-Requires Node 20+ and an [Anthropic API key](https://console.anthropic.com/settings/keys).
+Requires Node 20+ and an [Anthropic API key](https://console.anthropic.com/settings/keys)
+in the `ANTHROPIC_API_KEY` environment variable - the page never asks for it.
 
 ```bash
 npm install
 ANTHROPIC_API_KEY=sk-ant-... npm start
 # open http://localhost:3000
 ```
-
-If `ANTHROPIC_API_KEY` is not set, the page shows a key box instead; the key
-is sent only to this server (which calls the Anthropic API with it) and can
-optionally be remembered in your browser's localStorage. You can also copy
-`.env.example` to `.env` and export it however you prefer - the server reads
-only the process environment.
 
 Optional environment variables: `PORT` (default 3000) and `CLAUDE_MODEL`
 (default `claude-opus-5`).
@@ -71,7 +66,8 @@ text ─────────────────────────
 - `src/units.js` - fraction/unit parsing, imperial→metric conversion, and a
   grams-per-cup density table for common ingredients.
 - `src/prompt.js` - the system prompt and the JSON schema the model fills in.
-- `src/claude.js` - the API call (structured outputs + server-side refusal
+- `src/claude.js` - the API call, keyed from the environment (structured
+  outputs + server-side refusal
   fallbacks, with a plain-JSON retry if those betas aren't on your key).
 - `src/reconcile.js` - merges the model's judgement with the local arithmetic;
   items whose numbers were verified locally are marked `checked` in the JSON.

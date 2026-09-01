@@ -3,74 +3,94 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>recipecard — recipe to shopping card</title>
+<title>Recipe Card · marktan.ai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400;1,9..144,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='6' y='3' width='20' height='26' rx='3' fill='%23fbfaf8' stroke='%23b9b1a3'/><path d='M11 11h10M11 16h10M11 21h6' stroke='%23c2bab0' stroke-linecap='round'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='6' y='3' width='20' height='26' rx='2' fill='%23f5efe2' stroke='%23b6a988'/><path d='M11 11h10M11 16h10M11 21h6' stroke='%23bb3b22' stroke-linecap='round'/></svg>">
 </head>
 <body>
 
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/">Recipe <em>Card</em></a>
+    <nav>
+      <a href="#input-panel">List</a>
+      <a href="#output" id="nav-card">Card</a>
+      <a href="https://www.marktan.ai/" rel="noopener">marktan.ai ↗</a>
+    </nav>
+  </div>
+</div>
+
 <header class="masthead">
-  <h1>recipecard</h1>
-  <p>A recipe link or a photo goes in. The list of things to buy comes out, on a card that fits in your pocket.</p>
+  <p class="kicker">marktan.ai · kitchen supplement</p>
+  <h1>Recipe <em>Card</em></h1>
+  <p class="dateline"><span id="dateline">—</span></p>
+  <p class="standfirst">A recipe link or a photo goes in. The list of things to buy comes out,
+  on a 3×5 card that fits in your pocket — measures converted back to what shops
+  actually sell, with the why behind every variety.</p>
 </header>
 
 <main>
   <!-- ------------------------------------------------ input ------------ -->
-  <section class="panel" id="input-panel">
-    <div class="tabs" role="tablist">
-      <button class="tab is-active" role="tab" data-tab="link" aria-selected="true">Link</button>
-      <button class="tab" role="tab" data-tab="photo" aria-selected="false">Photo</button>
-      <button class="tab" role="tab" data-tab="paste" aria-selected="false">Paste</button>
+  <section id="input-panel">
+    <div class="section-head">
+      <h2>Recipe · In</h2>
+      <span class="section-meta">link · photo · text</span>
     </div>
 
-    <div class="tab-panel is-active" data-panel="link">
-      <label for="urls">Recipe address<span class="hint">one per line, up to five</span></label>
-      <textarea id="urls" rows="3" spellcheck="false"
-        placeholder="https://www.seriouseats.com/…"></textarea>
-    </div>
+    <div class="panel">
+      <div class="tabs" role="tablist">
+        <button class="tab is-active" role="tab" data-tab="link" aria-selected="true"><i>01</i>Link</button>
+        <button class="tab" role="tab" data-tab="photo" aria-selected="false"><i>02</i>Photo</button>
+        <button class="tab" role="tab" data-tab="paste" aria-selected="false"><i>03</i>Paste</button>
+      </div>
 
-    <div class="tab-panel" data-panel="photo">
-      <label for="photos">Photo of a recipe<span class="hint">a page, a card, a screenshot</span></label>
-      <input type="file" id="photos" accept="image/*" multiple>
-      <div id="thumbs" class="thumbs"></div>
-    </div>
+      <div class="tab-panel is-active" data-panel="link">
+        <label for="urls">Recipe address<span class="hint">one per line, up to five</span></label>
+        <textarea id="urls" rows="3" spellcheck="false"
+          placeholder="https://www.seriouseats.com/…"></textarea>
+      </div>
 
-    <div class="tab-panel" data-panel="paste">
-      <label for="pasted">Recipe text<span class="hint">ingredients and method both help</span></label>
-      <textarea id="pasted" rows="8" spellcheck="false"
-        placeholder="Ingredients&#10;2 cups diced tomatoes&#10;3 russet potatoes…"></textarea>
-    </div>
+      <div class="tab-panel" data-panel="photo">
+        <label for="photos">Photo of a recipe<span class="hint">a page, a card, a screenshot</span></label>
+        <input type="file" id="photos" accept="image/*" multiple>
+        <div id="thumbs" class="thumbs"></div>
+      </div>
 
-    <div class="options">
-      <label class="field">
-        <span>Servings</span>
-        <input type="text" id="servings" placeholder="as written" size="8">
-      </label>
-      <label class="check">
-        <input type="checkbox" id="staples" checked> <span>Include cupboard staples</span>
-      </label>
-    </div>
+      <div class="tab-panel" data-panel="paste">
+        <label for="pasted">Recipe text<span class="hint">ingredients and method both help</span></label>
+        <textarea id="pasted" rows="8" spellcheck="false"
+          placeholder="Ingredients&#10;2 cups diced tomatoes&#10;3 russet potatoes…"></textarea>
+      </div>
 
-    <div class="key-row" id="key-row" hidden>
-      <label class="field grow">
-        <span>Anthropic API key</span>
-        <input type="password" id="apikey" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
-      </label>
-      <label class="check">
-        <input type="checkbox" id="remember" checked> <span>Remember in this browser</span>
-      </label>
-    </div>
+      <div class="options">
+        <label class="field">
+          <span>Servings</span>
+          <input type="text" id="servings" placeholder="as written" size="8">
+        </label>
+        <label class="check">
+          <input type="checkbox" id="staples" checked> <span>Include cupboard staples</span>
+        </label>
+      </div>
 
-    <div class="actions">
-      <button id="build" class="primary">Make the card</button>
-      <span id="status" class="status" role="status" aria-live="polite"></span>
-    </div>
 
-    <p class="disclaimer" id="key-note"></p>
+      <div class="actions">
+        <button id="build" class="primary">Make the card</button>
+        <span id="status" class="status" role="status" aria-live="polite"></span>
+      </div>
+
+    </div>
   </section>
 
   <!-- ------------------------------------------------ output ----------- -->
   <section id="output" hidden>
+    <div class="section-head">
+      <h2>Shopping · List</h2>
+      <span class="section-meta" id="output-meta"></span>
+    </div>
+
     <div class="card-actions">
       <button id="print">Print</button>
       <button id="copy">Copy as text</button>
@@ -85,24 +105,30 @@
     <div id="cards" class="cards"></div>
 
     <div class="editor no-print">
-      <h2>Add something to the card</h2>
-      <form id="add-form">
-        <input type="text" id="add-name" placeholder="Item, e.g. Bay leaves" required maxlength="28">
-        <input type="text" id="add-buy" placeholder="Amount, e.g. 1 small pack" maxlength="26">
-        <select id="add-category"></select>
-        <button type="submit">Add</button>
-      </form>
-      <div id="trash" class="trash" hidden>
-        <h3>Removed</h3>
-        <ul id="trash-list"></ul>
+      <div class="section-head">
+        <h2>Card · Edits</h2>
+        <span class="section-meta">by hand</span>
       </div>
-      <p class="disclaimer">Click any item name or amount on the card to correct it. The × removes a line; tap the circle to tick something off while you shop.</p>
+      <div class="panel">
+        <form id="add-form">
+          <input type="text" id="add-name" placeholder="Item, e.g. Bay leaves" required maxlength="28">
+          <input type="text" id="add-buy" placeholder="Amount, e.g. 1 small pack" maxlength="26">
+          <select id="add-category"></select>
+          <button type="submit">Add</button>
+        </form>
+        <div id="trash" class="trash" hidden>
+          <h3>Removed</h3>
+          <ul id="trash-list"></ul>
+        </div>
+        <p class="disclaimer">Click any item name or amount on the card to correct it. The × removes a line; tap the circle to tick something off while you shop.</p>
+      </div>
     </div>
   </section>
 </main>
 
 <footer class="no-print">
   <p>Weights are shopping estimates. Anything the recipe did not actually say is marked <span class="badge-inline">assumed</span>.</p>
+  <p class="colophon">Recipe Card · part of <a href="https://www.marktan.ai/" rel="noopener">marktan.ai</a></p>
 </footer>
 
 <script type="module" src="/app.js"></script>
