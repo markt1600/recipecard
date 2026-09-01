@@ -226,7 +226,7 @@ export function recipeToText(recipe, sourceUrl) {
   return lines.join('\n').slice(0, MAX_TEXT);
 }
 
-export async function extractFromUrl(rawUrl) {
+async function fetchAndParse(rawUrl) {
   const { response, finalUrl } = await fetchWithGuard(rawUrl);
   const html = await readCapped(response);
 
@@ -241,6 +241,37 @@ export async function extractFromUrl(rawUrl) {
   const pageText = stripTags(html).slice(0, MAX_TEXT);
   const recipe = { title: stripTags(title), pageText, structured: false };
   return { ...recipe, sourceUrl: finalUrl, text: recipeToText(recipe, finalUrl) };
+}
+
+export async function extractFromUrl(rawUrl) {
+  try {
+    return await fetchAndParse(rawUrl);
+  } catch (error) {
+    if (!/HTTP 40[36]/.test(String(error.message))) throw error;
+
+    // A bot shield (usually Cloudflare) is refusing the server even though a
+    // browser gets through - it fingerprints the TLS handshake and IP, so no
+    // header will help. Try the Internet Archive's copy before giving up.
+    try {
+      const archived = await fetchAndParse(`https://web.archive.org/web/2id_/${rawUrl}`);
+      archived.sourceUrl = rawUrl;
+      archived.viaArchive = true;
+      archived.text = recipeToText(archived, rawUrl);
+      return archived;
+    } catch {
+      const host = safeHost(rawUrl);
+      throw new Error(
+        `${host} sits behind a bot shield that blocks server-side reading (HTTP 403), ` +
+        'and the Internet Archive has no copy of this page. Your browser gets through ' +
+        'because it is a real browser - so open the recipe, select all, and paste it ' +
+        'here instead, or add a screenshot.',
+      );
+    }
+  }
+}
+
+function safeHost(rawUrl) {
+  try { return new URL(rawUrl).hostname; } catch { return rawUrl; }
 }
 
 export const __internal = { stripTags, fromJsonLd, isPrivateAddress, findRecipeNode };

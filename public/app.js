@@ -30,19 +30,6 @@ const state = {
 
 /* ------------------------------------------------------------- input UI */
 
-for (const tab of document.querySelectorAll('.tab')) {
-  tab.addEventListener('click', () => {
-    for (const other of document.querySelectorAll('.tab')) {
-      const active = other === tab;
-      other.classList.toggle('is-active', active);
-      other.setAttribute('aria-selected', String(active));
-    }
-    for (const panel of document.querySelectorAll('.tab-panel')) {
-      panel.classList.toggle('is-active', panel.dataset.panel === tab.dataset.tab);
-    }
-  });
-}
-
 const categorySelect = $('#add-category');
 for (const category of CATEGORIES) {
   const option = document.createElement('option');
@@ -52,19 +39,93 @@ for (const category of CATEGORIES) {
 }
 categorySelect.value = 'other';
 
-/* Photos are downscaled in the browser: smaller upload, and 1568px is as much
-   as the model uses anyway. */
-$('#photos').addEventListener('change', async (event) => {
-  for (const file of [...event.target.files].slice(0, 4 - state.images.length)) {
+/* One field, no choosing: lines that are all links are treated as links,
+   anything else is recipe text, and images arrive by paste, drop or button. */
+
+function looksLikeUrl(line) {
+  if (/\s/.test(line)) return false;
+  try {
+    const url = new URL(/^https?:\/\//i.test(line) ? line : `https://${line}`);
+    const labels = url.hostname.split('.');
+    return labels.length >= 2 && /^[a-z]{2,}$/i.test(labels[labels.length - 1]);
+  } catch {
+    return false;
+  }
+}
+
+function detectInput() {
+  const raw = $('#recipe-input').value.trim();
+  if (!raw) return { urls: [], text: '' };
+  const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+  const urls = lines.filter(looksLikeUrl);
+  if (urls.length && urls.length === lines.length) {
+    return {
+      urls: urls.slice(0, 5).map((u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`)),
+      text: '',
+    };
+  }
+  return { urls: [], text: raw };
+}
+
+function describeInput() {
+  const { urls, text } = detectInput();
+  const parts = [];
+  if (urls.length) parts.push(`${urls.length} link${urls.length === 1 ? '' : 's'}`);
+  if (text) parts.push(`recipe text (${text.split('\n').filter((l) => l.trim()).length} lines)`);
+  if (state.images.length) parts.push(`${state.images.length} photo${state.images.length === 1 ? '' : 's'}`);
+  const badge = $('#detected');
+  badge.textContent = parts.length ? `detected: ${parts.join(' + ')}` : 'nothing yet — paste away';
+  badge.classList.toggle('is-live', parts.length > 0);
+}
+
+$('#recipe-input').addEventListener('input', describeInput);
+
+async function addPhotos(files) {
+  for (const file of [...files].slice(0, 4 - state.images.length)) {
+    if (!file.type.startsWith('image/')) continue;
     try {
       state.images.push(await downscale(file));
     } catch {
-      setStatus(`Could not read ${file.name}.`, true);
+      setStatus(`Could not read ${file.name || 'that image'}.`, true);
     }
   }
-  event.target.value = '';
   renderThumbs();
+  describeInput();
+}
+
+$('#add-photo').addEventListener('click', () => $('#photos').click());
+$('#photos').addEventListener('change', async (event) => {
+  await addPhotos(event.target.files);
+  event.target.value = '';
 });
+
+// Pasting a photo (from a screenshot tool, or a copied image) just works.
+document.addEventListener('paste', (event) => {
+  const files = [...(event.clipboardData?.items || [])]
+    .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+    .map((item) => item.getAsFile())
+    .filter(Boolean);
+  if (files.length) {
+    event.preventDefault();
+    addPhotos(files);
+  }
+});
+
+// So does dropping one onto the input area.
+const dropzone = $('#dropzone');
+for (const type of ['dragover', 'dragenter']) {
+  dropzone.addEventListener(type, (event) => {
+    event.preventDefault();
+    dropzone.classList.add('is-dragging');
+  });
+}
+for (const type of ['dragleave', 'drop']) {
+  dropzone.addEventListener(type, (event) => {
+    event.preventDefault();
+    dropzone.classList.remove('is-dragging');
+  });
+}
+dropzone.addEventListener('drop', (event) => addPhotos(event.dataTransfer?.files || []));
 
 async function downscale(file) {
   const bitmap = await createImageBitmap(file);
@@ -93,6 +154,7 @@ function renderThumbs() {
       remove.addEventListener('click', () => {
         state.images.splice(index, 1);
         renderThumbs();
+        describeInput();
       });
       figure.append(img, remove);
       return figure;
@@ -106,11 +168,10 @@ $('#build').addEventListener('click', build);
 
 async function build() {
   const button = $('#build');
-  const urls = $('#urls').value.split('\n').map((u) => u.trim()).filter(Boolean);
-  const text = $('#pasted').value.trim();
+  const { urls, text } = detectInput();
 
   if (!urls.length && !text && !state.images.length) {
-    return setStatus('Add a link, a photo, or some recipe text first.', true);
+    return setStatus('Paste a link, a photo, or some recipe text first.', true);
   }
 
   button.disabled = true;
@@ -141,6 +202,7 @@ async function build() {
     if (!response.ok || body.error) throw new Error(body.error || `Server error ${response.status}`);
 
     state.card = body.card;
+    normalizeNames(state.card);
     state.card.name = $('#card-name').value.trim() || state.card.title;
     let nextId = 0;
     for (const item of [...state.card.items, ...state.card.staples]) item.id = `item-${nextId++}`;
@@ -326,18 +388,15 @@ function buildLine(item) {
   const top = el('div', 'line-top');
 
   const name = el('span', 'item-name');
-  const varietyShown = item.variety && !item.name.toLowerCase().includes(item.variety.toLowerCase());
-  if (varietyShown) {
-    const variety = el('span', 'item-variety');
-    variety.textContent = `${item.variety} `;
-    name.append(variety);
-  }
   const nameText = el('span');
   nameText.textContent = item.name;
   nameText.contentEditable = 'true';
   nameText.spellcheck = false;
   nameText.title = 'Click to edit';
-  nameText.addEventListener('input', () => { item.name = nameText.textContent.trim(); });
+  nameText.addEventListener('input', () => {
+    item.name = nameText.textContent.trim();
+    archivePersistCurrent();
+  });
   name.append(nameText);
 
   const buy = el('span', 'item-buy');
@@ -345,7 +404,10 @@ function buildLine(item) {
   buy.contentEditable = 'true';
   buy.spellcheck = false;
   buy.title = 'Click to edit';
-  buy.addEventListener('input', () => { item.buy = buy.textContent.trim(); });
+  buy.addEventListener('input', () => {
+    item.buy = buy.textContent.trim();
+    archivePersistCurrent();
+  });
 
   if (item.assumed) {
     const badge = el('span', 'badge');
@@ -362,13 +424,36 @@ function buildLine(item) {
     if (note) body.append(note);
   }
 
-  const remove = el('button', 'remove');
+  const actions = el('span', 'line-actions');
+
+  const edit = el('button');
+  edit.type = 'button';
+  edit.textContent = '✎';
+  edit.title = 'Edit — or just click the name or amount';
+  edit.addEventListener('click', () => {
+    nameText.focus();
+    const range = document.createRange();
+    range.selectNodeContents(nameText);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+
+  const inCupboard = state.card.staples.includes(item);
+  const move = el('button');
+  move.type = 'button';
+  move.textContent = inCupboard ? '↩' : '⌂';
+  move.title = inCupboard ? 'Move back to the shopping list' : 'Move to the cupboard card';
+  move.addEventListener('click', () => moveItem(item));
+
+  const remove = el('button');
   remove.type = 'button';
   remove.textContent = '×';
   remove.title = `Remove ${item.name}`;
   remove.addEventListener('click', () => removeItem(item));
 
-  line.append(tick, body, remove);
+  actions.append(edit, move, remove);
+  line.append(tick, body, actions);
   return line;
 }
 
@@ -392,6 +477,21 @@ function buildNote(item) {
 }
 
 /* ------------------------------------------------------------- editing */
+
+function moveItem(item) {
+  const fromStaples = state.card.staples.includes(item);
+  const from = fromStaples ? state.card.staples : state.card.items;
+  const to = fromStaples ? state.card.items : state.card.staples;
+  const index = from.indexOf(item);
+  if (index === -1) return;
+  from.splice(index, 1);
+  item.staple = !fromStaples;
+  to.push(item);
+  render();
+  setStatus(fromStaples
+    ? `${item.name} moved back to the shopping list.`
+    : `${item.name} moved to the cupboard card - a reminder, not a purchase.`);
+}
 
 function removeItem(item) {
   for (const bucket of ['items', 'staples']) {
@@ -480,8 +580,7 @@ function asPlainText() {
     if (!items.length) return;
     lines.push(heading);
     for (const item of sortItems(items)) {
-      const label = [item.variety, item.name].filter(Boolean).join(' ');
-      lines.push(`[ ] ${label} — ${item.buy}`);
+      lines.push(`[ ] ${item.name} — ${item.buy}`);
       const extras = [
         item.varietyNote && `${item.varietySource === 'recipe' ? 'recipe' : 'why'}: ${item.varietyNote}`,
         item.note,
@@ -497,6 +596,18 @@ function asPlainText() {
   section('CUPBOARD CHECK', state.card.staples);
   if (state.card.sources?.length) lines.push(`Source: ${state.card.sources.join(', ')}`);
   return lines.join('\n');
+}
+
+/** "Russet" + "Potatoes" become one editable name: "Russet Potatoes".
+    Runs once per item - a later rename must never get the prefix back. */
+function normalizeNames(card) {
+  for (const item of [...(card.items || []), ...(card.staples || [])]) {
+    if (item.varietyFolded) continue;
+    if (item.variety && !item.name.toLowerCase().includes(item.variety.toLowerCase())) {
+      item.name = `${item.variety} ${item.name}`;
+    }
+    item.varietyFolded = true;
+  }
 }
 
 /* ------------------------------------------------------------- archive */
@@ -549,6 +660,7 @@ function archiveOpen(id) {
   const entry = archiveLoad().find((e) => e.id === id);
   if (!entry) return;
   state.card = JSON.parse(JSON.stringify(entry.card));
+  normalizeNames(state.card);
   let nextId = 0;
   for (const item of [...state.card.items, ...state.card.staples]) item.id = `item-${nextId++}`;
   state.done = new Set(entry.done || []);

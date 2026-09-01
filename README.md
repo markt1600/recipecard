@@ -4,7 +4,10 @@ A recipe link or a photo goes in. The list of things to buy comes out, on a
 3×5 index card that fits in your pocket.
 
 Give it a recipe **URL**, a **photo** of a recipe (a cookbook page, a card, a
-screenshot), or **pasted text**, and it produces a shopping-list card that:
+screenshot), or **pasted text** - one input, no mode to choose: lines that are
+links are fetched, anything else is read as the recipe, and photos arrive by
+paste, drag-and-drop, or the Add photo button. It produces a shopping-list
+card that:
 
 - **Converts kitchen measures into shopping amounts.** Cups, sticks, ounces
   and pounds become grams, millilitres, or a number of things to pick up.
@@ -25,9 +28,10 @@ screenshot), or **pasted text**, and it produces a shopping-list card that:
   the way you walk a shop. Cupboard staples (salt, oil, common spices) go on
   their own kraft-coloured card so you check before you buy.
 
-The card is editable in place: click a name or amount to correct it, hit the
-× to remove a line (with undo), add items by hand, and tap the circle to tick
-things off while you shop. Cards can be named (or rename one by clicking its
+The card is editable in place: click a name or amount to correct it (swap
+sugar for honey, say), and every line has three controls - edit, move to the
+cupboard card (a reminder to check, not a purchase) and remove (with undo).
+Add items by hand, and tap the circle to tick things off while you shop. Cards can be named (or rename one by clicking its
 title), and every card you make is kept in a **Card Archive** in your browser
 (localStorage) - reopen, keep editing, print, or delete any of them later.
 Print puts each card on a 3in x 5in page; you can also copy the list as plain
@@ -92,9 +96,11 @@ text ─────────────────────────
 ## Honest limitations
 
 - Weights for produce are shopping estimates, not scale readings.
-- Some recipe sites block automated fetching (HTTP 403). Two different
-  user-agents are tried; if both are refused, paste the recipe text or use a
-  screenshot instead.
+- Some recipe sites sit behind bot shields (Cloudflare and friends) that
+  block all server-side fetching with HTTP 403 - they fingerprint the TLS
+  handshake, so no header can help. Two user-agents are tried, then the
+  Internet Archive's copy of the page; if neither works, the error says so -
+  paste the recipe text or add a screenshot instead.
 - Photo reading is as good as the photo - unreadable lines are flagged in the
   warnings rather than guessed silently.
 - A build can take a minute or two on a long recipe. The server holds the

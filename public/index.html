@@ -41,28 +41,16 @@
     </div>
 
     <div class="panel">
-      <div class="tabs" role="tablist">
-        <button class="tab is-active" role="tab" data-tab="link" aria-selected="true"><i>01</i>Link</button>
-        <button class="tab" role="tab" data-tab="photo" aria-selected="false"><i>02</i>Photo</button>
-        <button class="tab" role="tab" data-tab="paste" aria-selected="false"><i>03</i>Paste</button>
-      </div>
-
-      <div class="tab-panel is-active" data-panel="link">
-        <label for="urls">Recipe address<span class="hint">one per line, up to five</span></label>
-        <textarea id="urls" rows="3" spellcheck="false"
-          placeholder="https://www.seriouseats.com/…"></textarea>
-      </div>
-
-      <div class="tab-panel" data-panel="photo">
-        <label for="photos">Photo of a recipe<span class="hint">a page, a card, a screenshot</span></label>
-        <input type="file" id="photos" accept="image/*" multiple>
+      <div class="dropzone" id="dropzone">
+        <label for="recipe-input">Recipe<span class="hint">paste a link, the recipe itself, or a photo — it works out which</span></label>
+        <textarea id="recipe-input" rows="6" spellcheck="false"
+          placeholder="https://www.seriouseats.com/…&#10;&#10;— or paste the recipe —&#10;2 cups diced tomatoes&#10;3 russet potatoes…"></textarea>
+        <div class="input-meta">
+          <span id="detected" class="detected">nothing yet — paste away</span>
+          <button type="button" id="add-photo">Add photo</button>
+          <input type="file" id="photos" hidden accept="image/*" multiple>
+        </div>
         <div id="thumbs" class="thumbs"></div>
-      </div>
-
-      <div class="tab-panel" data-panel="paste">
-        <label for="pasted">Recipe text<span class="hint">ingredients and method both help</span></label>
-        <textarea id="pasted" rows="8" spellcheck="false"
-          placeholder="Ingredients&#10;2 cups diced tomatoes&#10;3 russet potatoes…"></textarea>
       </div>
 
       <div class="options">
@@ -124,7 +112,7 @@
           <h3>Removed</h3>
           <ul id="trash-list"></ul>
         </div>
-        <p class="disclaimer">Click any item name or amount on the card to correct it. The × removes a line; tap the circle to tick something off while you shop.</p>
+        <p class="disclaimer">Click any item name or amount on the card to change it (swap sugar for honey, say). Each line also has ✎ edit, ⌂ move to the cupboard card, and × remove; tap the circle to tick things off while you shop.</p>
       </div>
     </div>
   </section>

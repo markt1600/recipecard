@@ -54,6 +54,9 @@ export async function runBuild(input) {
   for (const url of input.urls) {
     try {
       const recipe = await extractFromUrl(url);
+      if (recipe.viaArchive) {
+        warnings.push(`${new URL(url).hostname} blocks direct reading, so an archived copy from web.archive.org was used - it may be out of date.`);
+      }
       if (!recipe.structured) {
         warnings.push(`${new URL(recipe.sourceUrl).hostname} has no structured recipe data - read from the page text, so check the list.`);
       }
