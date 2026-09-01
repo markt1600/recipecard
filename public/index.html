@@ -66,6 +66,10 @@
       </div>
 
       <div class="options">
+        <label class="field grow">
+          <span>Card name</span>
+          <input type="text" id="card-name" placeholder="named after the recipe" maxlength="60">
+        </label>
         <label class="field">
           <span>Servings</span>
           <input type="text" id="servings" placeholder="as written" size="8">
@@ -123,6 +127,15 @@
         <p class="disclaimer">Click any item name or amount on the card to correct it. The × removes a line; tap the circle to tick something off while you shop.</p>
       </div>
     </div>
+  </section>
+  <!-- ------------------------------------------------ archive ---------- -->
+  <section id="archive" class="no-print" hidden>
+    <div class="section-head">
+      <h2>Card · Archive</h2>
+      <span class="section-meta" id="archive-meta"></span>
+    </div>
+    <div id="archive-list" class="archive-list"></div>
+    <p class="disclaimer">Every card you make is kept in this browser. Open one to keep editing it, or print it straight from here.</p>
   </section>
 </main>
 

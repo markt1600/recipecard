@@ -93,50 +93,67 @@ function validate(body) {
 
 async function handleBuild(req, res) {
   const body = await readBody(req);
-  const input = validate(body);
+  const input = validate(body); // bad input still gets a proper 4xx
 
-  const recipes = [];
-  const warnings = [];
+  // The model can take a couple of minutes on a long recipe, which is longer
+  // than many proxies and tunnels will hold a silent connection. So commit to
+  // a 200 now and drip whitespace while working - leading whitespace is legal
+  // JSON, so the browser's JSON.parse never notices. Errors from here on ride
+  // inside the JSON body instead of the status code.
+  res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+  const heartbeat = setInterval(() => {
+    if (!res.writableEnded) res.write(' ');
+  }, 10000);
 
-  for (const url of input.urls) {
-    try {
-      const recipe = await extractFromUrl(url);
-      if (!recipe.structured) {
-        warnings.push(`${new URL(recipe.sourceUrl).hostname} has no structured recipe data - read from the page text, so check the list.`);
+  try {
+    const recipes = [];
+    const warnings = [];
+
+    for (const url of input.urls) {
+      try {
+        const recipe = await extractFromUrl(url);
+        if (!recipe.structured) {
+          warnings.push(`${new URL(recipe.sourceUrl).hostname} has no structured recipe data - read from the page text, so check the list.`);
+        }
+        recipes.push(recipe);
+      } catch (error) {
+        warnings.push(`Could not read ${url}: ${error.message}`);
       }
-      recipes.push(recipe);
-    } catch (error) {
-      warnings.push(`Could not read ${url}: ${error.message}`);
     }
+
+    if (input.pastedText) {
+      recipes.push({ title: 'Pasted recipe', text: input.pastedText, structured: false, sourceUrl: null });
+    }
+
+    if (!recipes.length && !input.images.length) {
+      return res.end(JSON.stringify({ error: warnings.join(' ') || 'Nothing readable at that address.' }));
+    }
+
+    const { card: raw, degraded } = await buildCard({
+      recipes,
+      images: input.images,
+      servings: input.servings,
+      includeStaples: input.includeStaples,
+    });
+
+    const scale = Number(raw.scaleFactor);
+    const card = reconcileCard(raw, {
+      scale: Number.isFinite(scale) && scale > 0 && scale <= 50 ? scale : 1,
+      includeStaples: input.includeStaples,
+    });
+    card.sources = recipes.map((r) => r.sourceUrl).filter(Boolean);
+    card.warnings = warnings;
+    if (degraded) {
+      card.warnings.push('Structured output was unavailable on this key, so the list was parsed from free-form JSON.');
+    }
+
+    res.end(JSON.stringify({ card }));
+  } catch (error) {
+    console.error(error);
+    res.end(JSON.stringify({ error: error.message || 'Something went wrong.' }));
+  } finally {
+    clearInterval(heartbeat);
   }
-
-  if (input.pastedText) {
-    recipes.push({ title: 'Pasted recipe', text: input.pastedText, structured: false, sourceUrl: null });
-  }
-
-  if (!recipes.length && !input.images.length) {
-    return json(res, 502, { error: warnings.join(' ') || 'Nothing readable at that address.' });
-  }
-
-  const { card: raw, degraded } = await buildCard({
-    recipes,
-    images: input.images,
-    servings: input.servings,
-    includeStaples: input.includeStaples,
-  });
-
-  const scale = Number(raw.scaleFactor);
-  const card = reconcileCard(raw, {
-    scale: Number.isFinite(scale) && scale > 0 && scale <= 50 ? scale : 1,
-    includeStaples: input.includeStaples,
-  });
-  card.sources = recipes.map((r) => r.sourceUrl).filter(Boolean);
-  card.warnings = warnings;
-  if (degraded) {
-    card.warnings.push('Structured output was unavailable on this key, so the list was parsed from free-form JSON.');
-  }
-
-  return json(res, 200, { card });
 }
 
 async function serveStatic(req, res) {
@@ -172,9 +189,17 @@ const server = http.createServer(async (req, res) => {
   } catch (error) {
     const status = error instanceof ApiKeyError ? 401 : error.status || 500;
     if (status >= 500) console.error(error);
+    if (res.headersSent) {
+      if (!res.writableEnded) res.end(JSON.stringify({ error: error.message || 'Something went wrong.' }));
+      return;
+    }
     return json(res, status, { error: error.message || 'Something went wrong.' });
   }
 });
+
+// Long model calls: never let Node cut the response off itself.
+server.requestTimeout = 0;
+server.headersTimeout = 60_000;
 
 server.listen(PORT, () => {
   console.log(`recipecard listening on http://localhost:${PORT}`);

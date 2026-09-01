@@ -27,8 +27,11 @@ screenshot), or **pasted text**, and it produces a shopping-list card that:
 
 The card is editable in place: click a name or amount to correct it, hit the
 × to remove a line (with undo), add items by hand, and tap the circle to tick
-things off while you shop. Print puts each card on a 3in × 5in page; you can
-also copy the list as plain text or download it as JSON.
+things off while you shop. Cards can be named (or rename one by clicking its
+title), and every card you make is kept in a **Card Archive** in your browser
+(localStorage) - reopen, keep editing, print, or delete any of them later.
+Print puts each card on a 3in x 5in page; you can also copy the list as plain
+text or download it as JSON.
 
 ## Setup
 
@@ -80,3 +83,6 @@ text ─────────────────────────
   screenshot instead.
 - Photo reading is as good as the photo - unreadable lines are flagged in the
   warnings rather than guessed silently.
+- A build can take a minute or two on a long recipe. The server holds the
+  connection open with whitespace heartbeats (legal JSON padding) so proxies
+  and tunnels don't cut it off mid-thought.

@@ -601,3 +601,70 @@ footer .colophon { letter-spacing: 0.1em; text-transform: uppercase; font-size: 
   .card.kraft { background: #fff; }
   .remove { display: none; }
 }
+
+/* --------------------------------------------------------------- archive */
+.archive-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+.archive-tile {
+  background: var(--paper-2);
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  padding: 0.9rem 1rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.archive-tile.is-open { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.archive-tile-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.archive-tile-head h3 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 0;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archive-tile-head span {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+.archive-tile-meta {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 0;
+}
+.archive-tile-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 0.6rem;
+}
+.archive-tile-actions button {
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  padding: 0.28rem 0.75rem;
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.archive-tile-actions button:hover { color: var(--accent-deep); border-color: var(--ink-soft); }
+.archive-tile-actions button.danger:hover { color: var(--paper); background: var(--accent); border-color: var(--accent-deep); }

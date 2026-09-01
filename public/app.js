@@ -17,12 +17,15 @@ $('#dateline').textContent = new Date().toLocaleDateString('en-US', {
   weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
 });
 
+const ARCHIVE_KEY = 'recipecard.archive';
+
 const state = {
   card: null,
   images: [],
   removed: [],
   done: new Set(),
   showNotes: true,
+  archiveId: null,   // which archive entry the open card belongs to
 };
 
 /* ------------------------------------------------------------- input UI */
@@ -125,14 +128,25 @@ async function build() {
         includeStaples: $('#staples').checked,
       }),
     });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error || `Server error ${response.status}`);
+    const raw = await response.text();
+    let body;
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      throw new Error(
+        `The server sent back something that is not JSON (HTTP ${response.status}): ` +
+        `"${raw.trim().slice(0, 120)}". If recipecard is behind a proxy or tunnel, it may be cutting the request short.`,
+      );
+    }
+    if (!response.ok || body.error) throw new Error(body.error || `Server error ${response.status}`);
 
     state.card = body.card;
+    state.card.name = $('#card-name').value.trim() || state.card.title;
     let nextId = 0;
     for (const item of [...state.card.items, ...state.card.staples]) item.id = `item-${nextId++}`;
     state.removed = [];
     state.done = new Set();
+    state.archiveId = archiveAdd(state.card);
     $('#output').hidden = false;
     render();
     setStatus(`${countItems()} things to buy.`);
@@ -174,6 +188,7 @@ function render() {
   renderCards();
   renderTrash();
   updateMeta();
+  archivePersistCurrent();
 }
 
 function renderWarnings() {
@@ -227,7 +242,8 @@ function renderCards() {
     ...shopping.map((items, i) =>
       buildCardElement({
         items,
-        label: state.card.title,
+        label: state.card.name || state.card.title,
+        editableTitle: true,
         sub: [state.card.servings, state.card.sources?.length ? hostOf(state.card.sources[0]) : '']
           .filter(Boolean).join(' · '),
         page: i + 1,
@@ -252,12 +268,23 @@ function hostOf(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
 }
 
-function buildCardElement({ items, label, sub, page, pages, kraft }) {
+function buildCardElement({ items, label, sub, page, pages, kraft, editableTitle }) {
   const card = el('article', 'card' + (kraft ? ' kraft' : ''));
 
   const head = el('div', 'card-head');
   const title = el('div', 'card-title');
-  title.textContent = label || 'Shopping';
+  const titleText = el('span');
+  titleText.textContent = label || 'Shopping';
+  if (editableTitle) {
+    titleText.contentEditable = 'true';
+    titleText.spellcheck = false;
+    titleText.title = 'Click to rename this card';
+    titleText.addEventListener('input', () => {
+      state.card.name = titleText.textContent.trim();
+    });
+    titleText.addEventListener('blur', () => render()); // sync other pages + archive
+  }
+  title.append(titleText);
   if (sub) {
     const small = el('span', 'card-sub');
     small.textContent = sub;
@@ -439,13 +466,13 @@ $('#download').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state.card, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `${slug(state.card.title)}-shopping-list.json`;
+  link.download = `${slug(state.card.name || state.card.title)}-shopping-list.json`;
   link.click();
   URL.revokeObjectURL(link.href);
 });
 
 function asPlainText() {
-  const lines = [state.card.title.toUpperCase()];
+  const lines = [(state.card.name || state.card.title).toUpperCase()];
   if (state.card.servings) lines.push(state.card.servings);
   lines.push('');
 
@@ -471,6 +498,123 @@ function asPlainText() {
   if (state.card.sources?.length) lines.push(`Source: ${state.card.sources.join(', ')}`);
   return lines.join('\n');
 }
+
+/* ------------------------------------------------------------- archive */
+
+function archiveLoad() {
+  try {
+    const list = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function archiveSave(list) {
+  try {
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(list));
+  } catch {
+    setStatus('Could not save to the archive - browser storage is full or blocked.', true);
+  }
+  renderArchive();
+}
+
+function archiveAdd(card) {
+  const id = `card-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const list = archiveLoad();
+  list.unshift({
+    id,
+    name: card.name || card.title,
+    createdAt: new Date().toISOString(),
+    done: [],
+    card,
+  });
+  archiveSave(list);
+  return id;
+}
+
+/** Keep the open card's archive entry in step with every edit. */
+function archivePersistCurrent() {
+  if (!state.card || !state.archiveId) return;
+  const list = archiveLoad();
+  const entry = list.find((e) => e.id === state.archiveId);
+  if (!entry) return;
+  entry.name = state.card.name || state.card.title;
+  entry.card = state.card;
+  entry.done = [...state.done];
+  archiveSave(list);
+}
+
+function archiveOpen(id) {
+  const entry = archiveLoad().find((e) => e.id === id);
+  if (!entry) return;
+  state.card = JSON.parse(JSON.stringify(entry.card));
+  let nextId = 0;
+  for (const item of [...state.card.items, ...state.card.staples]) item.id = `item-${nextId++}`;
+  state.done = new Set(entry.done || []);
+  state.removed = [];
+  state.archiveId = id;
+  $('#output').hidden = false;
+  render();
+  setStatus(`Opened "${entry.name}".`);
+}
+
+function archiveDelete(id) {
+  const list = archiveLoad().filter((e) => e.id !== id);
+  if (state.archiveId === id) state.archiveId = null; // the open copy stays, unsaved
+  archiveSave(list);
+}
+
+function renderArchive() {
+  const section = $('#archive');
+  const list = archiveLoad();
+  section.hidden = list.length === 0;
+  $('#archive-meta').textContent = `${list.length} card${list.length === 1 ? '' : 's'} · saved in this browser`;
+
+  $('#archive-list').replaceChildren(...list.map((entry) => {
+    const tile = el('article', 'archive-tile' + (entry.id === state.archiveId ? ' is-open' : ''));
+
+    const head = el('div', 'archive-tile-head');
+    const name = text('h3', entry.name || 'Untitled card');
+    const when = text('span', new Date(entry.createdAt).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric',
+    }).toLowerCase());
+    head.append(name, when);
+
+    const total = (entry.card.items?.length || 0) + (entry.card.staples?.length || 0);
+    const host = entry.card.sources?.length ? hostOf(entry.card.sources[0]) : '';
+    const meta = text('p', [
+      `${total} item${total === 1 ? '' : 's'}`,
+      entry.card.servings,
+      host,
+    ].filter(Boolean).join(' · '));
+    meta.className = 'archive-tile-meta';
+
+    const row = el('div', 'archive-tile-actions');
+    const open = text('button', 'Open');
+    open.type = 'button';
+    open.addEventListener('click', () => {
+      archiveOpen(entry.id);
+      $('#output').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    const print = text('button', 'Print');
+    print.type = 'button';
+    print.addEventListener('click', () => {
+      archiveOpen(entry.id);
+      setTimeout(() => window.print(), 60); // let the card paint first
+    });
+    const del = text('button', 'Delete');
+    del.type = 'button';
+    del.className = 'danger';
+    del.addEventListener('click', () => archiveDelete(entry.id));
+    row.append(open, print, del);
+
+    tile.append(head, meta, row);
+    return tile;
+  }));
+}
+
+renderArchive();
 
 /* ------------------------------------------------------------- helpers */
 
