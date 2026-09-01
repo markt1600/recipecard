@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>recipecard — recipe to shopping card</title>
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='6' y='3' width='20' height='26' rx='3' fill='%23fbfaf8' stroke='%23b9b1a3'/><path d='M11 11h10M11 16h10M11 21h6' stroke='%23c2bab0' stroke-linecap='round'/></svg>">
+</head>
+<body>
+
+<header class="masthead">
+  <h1>recipecard</h1>
+  <p>A recipe link or a photo goes in. The list of things to buy comes out, on a card that fits in your pocket.</p>
+</header>
+
+<main>
+  <!-- ------------------------------------------------ input ------------ -->
+  <section class="panel" id="input-panel">
+    <div class="tabs" role="tablist">
+      <button class="tab is-active" role="tab" data-tab="link" aria-selected="true">Link</button>
+      <button class="tab" role="tab" data-tab="photo" aria-selected="false">Photo</button>
+      <button class="tab" role="tab" data-tab="paste" aria-selected="false">Paste</button>
+    </div>
+
+    <div class="tab-panel is-active" data-panel="link">
+      <label for="urls">Recipe address<span class="hint">one per line, up to five</span></label>
+      <textarea id="urls" rows="3" spellcheck="false"
+        placeholder="https://www.seriouseats.com/…"></textarea>
+    </div>
+
+    <div class="tab-panel" data-panel="photo">
+      <label for="photos">Photo of a recipe<span class="hint">a page, a card, a screenshot</span></label>
+      <input type="file" id="photos" accept="image/*" multiple>
+      <div id="thumbs" class="thumbs"></div>
+    </div>
+
+    <div class="tab-panel" data-panel="paste">
+      <label for="pasted">Recipe text<span class="hint">ingredients and method both help</span></label>
+      <textarea id="pasted" rows="8" spellcheck="false"
+        placeholder="Ingredients&#10;2 cups diced tomatoes&#10;3 russet potatoes…"></textarea>
+    </div>
+
+    <div class="options">
+      <label class="field">
+        <span>Servings</span>
+        <input type="text" id="servings" placeholder="as written" size="8">
+      </label>
+      <label class="check">
+        <input type="checkbox" id="staples" checked> <span>Include cupboard staples</span>
+      </label>
+    </div>
+
+    <div class="key-row" id="key-row" hidden>
+      <label class="field grow">
+        <span>Anthropic API key</span>
+        <input type="password" id="apikey" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="check">
+        <input type="checkbox" id="remember" checked> <span>Remember in this browser</span>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button id="build" class="primary">Make the card</button>
+      <span id="status" class="status" role="status" aria-live="polite"></span>
+    </div>
+
+    <p class="disclaimer" id="key-note"></p>
+  </section>
+
+  <!-- ------------------------------------------------ output ----------- -->
+  <section id="output" hidden>
+    <div class="card-actions">
+      <button id="print">Print</button>
+      <button id="copy">Copy as text</button>
+      <button id="download">Download JSON</button>
+      <label class="check">
+        <input type="checkbox" id="show-notes" checked> <span>Show the why &amp; alternatives</span>
+      </label>
+    </div>
+
+    <div id="warnings" class="warnings" hidden></div>
+
+    <div id="cards" class="cards"></div>
+
+    <div class="editor no-print">
+      <h2>Add something to the card</h2>
+      <form id="add-form">
+        <input type="text" id="add-name" placeholder="Item, e.g. Bay leaves" required maxlength="28">
+        <input type="text" id="add-buy" placeholder="Amount, e.g. 1 small pack" maxlength="26">
+        <select id="add-category"></select>
+        <button type="submit">Add</button>
+      </form>
+      <div id="trash" class="trash" hidden>
+        <h3>Removed</h3>
+        <ul id="trash-list"></ul>
+      </div>
+      <p class="disclaimer">Click any item name or amount on the card to correct it. The × removes a line; tap the circle to tick something off while you shop.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="no-print">
+  <p>Weights are shopping estimates. Anything the recipe did not actually say is marked <span class="badge-inline">assumed</span>.</p>
+</footer>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>

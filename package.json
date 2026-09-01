@@ -1,0 +1,17 @@
+{
+  "name": "recipecard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Turn a recipe URL or photo into a printable 3x5 index-card shopping list.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0"
+  }
+}
