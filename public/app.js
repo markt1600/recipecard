@@ -710,7 +710,24 @@ function renderArchive() {
     del.type = 'button';
     del.className = 'danger';
     del.addEventListener('click', () => archiveDelete(entry.id));
-    row.append(open, print, del);
+    row.append(open, print);
+    // Owner only (the marktan.ai login cookie): send this saved card's
+    // unticked items straight to the shopping list, no need to open it.
+    if (ownerToken()) {
+      const shop = text('button', 'Add to shopping list');
+      shop.type = 'button';
+      shop.title = "Send the unticked items to the shopping list on marktan.ai";
+      shop.addEventListener('click', async () => {
+        const original = shop.textContent;
+        shop.disabled = true;
+        await shopSend(shopTexts(entry.card.items || [], new Set(entry.done || [])), (msg) => {
+          shop.textContent = msg;
+        });
+        setTimeout(() => { shop.textContent = original; shop.disabled = false; }, 4000);
+      });
+      row.append(shop);
+    }
+    row.append(del);
 
     tile.append(head, meta, row);
     return tile;
@@ -718,6 +735,62 @@ function renderArchive() {
 }
 
 renderArchive();
+
+/* ------------------------------------------- send to Mark's shopping list
+   The button appears only when the cross-subdomain owner cookie
+   (mt_owner, set by logging in on marktan.ai) is present. Server-side
+   that token can only APPEND items to the list — never read or edit it.
+   Unticked shopping items go over as "name — amount"; the cupboard card
+   stays here (it's a check-before-you-buy reminder, not a purchase). */
+const SHOP_API = 'https://www.marktan.ai/api/todos';
+
+function ownerToken() {
+  const match = document.cookie.match(/(?:^|;\s*)mt_owner=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/** "name — amount" for every unticked shopping item (staples excluded). */
+function shopTexts(items, doneIds) {
+  return items
+    .filter((item, i) => !doneIds.has(item.id ?? `item-${i}`))
+    .map((item) => (item.buy ? `${item.name} — ${item.buy}` : item.name));
+}
+
+/** POST the texts to the shopping bucket; reports through onStat(msg, isError). */
+async function shopSend(texts, onStat) {
+  const token = ownerToken();
+  if (!token) { onStat('log in at marktan.ai first', true); return; }
+  if (!texts.length) { onStat('nothing unticked to send', true); return; }
+  onStat('sending…', false);
+  try {
+    const res = await fetch(SHOP_API, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ add: texts, bucket: 'shopping' }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(res.status === 401 ? 'log in at marktan.ai first, then reload' : (j.error || `error ${res.status}`));
+    }
+    onStat(`added ${j.added}${j.skipped ? ` · ${j.skipped} already there` : ''} ✓`, false);
+  } catch (err) {
+    onStat(`couldn't send — ${err.message || err}`, true);
+  }
+}
+
+const sendShop = $('#send-shop');
+const sendShopStat = $('#send-shop-stat');
+if (sendShop && ownerToken()) sendShop.hidden = false;
+
+sendShop?.addEventListener('click', async () => {
+  if (!state.card) return;
+  sendShop.disabled = true;
+  await shopSend(shopTexts(state.card.items, state.done), (msg, isError) => {
+    sendShopStat.classList.toggle('error', isError);
+    sendShopStat.textContent = msg;
+  });
+  sendShop.disabled = false;
+});
 
 /* ------------------------------------------------------------- helpers */
 
