@@ -34,8 +34,7 @@ cupboard card (a reminder to check, not a purchase) and remove (with undo).
 Add items by hand, and tap the circle to tick things off while you shop. Cards can be named (or rename one by clicking its
 title), and every card you make is kept in a **Card Archive** in your browser
 (localStorage) - reopen, keep editing, print, or delete any of them later.
-Print puts each card on a 3in x 5in page; you can also copy the list as plain
-text or download it as JSON.
+Print puts each card on a 3in x 5in page, or copy the list as plain text.
 
 ## Setup
 

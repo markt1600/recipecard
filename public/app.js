@@ -562,15 +562,6 @@ $('#copy').addEventListener('click', async () => {
   setStatus('Copied the list to the clipboard.');
 });
 
-$('#download').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(state.card, null, 2)], { type: 'application/json' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${slug(state.card.name || state.card.title)}-shopping-list.json`;
-  link.click();
-  URL.revokeObjectURL(link.href);
-});
-
 function asPlainText() {
   const lines = [(state.card.name || state.card.title).toUpperCase()];
   if (state.card.servings) lines.push(state.card.servings);
@@ -745,8 +736,4 @@ function text(tag, content) {
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-function slug(value) {
-  return String(value || 'recipe').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'recipe';
 }
