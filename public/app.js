@@ -714,7 +714,7 @@ function renderArchive() {
     // Owner only (the marktan.ai login cookie): send this saved card's
     // unticked items straight to the shopping list, no need to open it.
     if (ownerToken()) {
-      const shop = text('button', 'Add to shopping list');
+      const shop = text('button', '→ Shopping list');
       shop.type = 'button';
       shop.title = "Send the unticked items to the shopping list on marktan.ai";
       shop.addEventListener('click', async () => {

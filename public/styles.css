@@ -197,8 +197,7 @@ main {
 #add-photo {
   background: var(--paper);
   border: 1px solid var(--rule-strong);
-  border-radius: 3px;
-  padding: 0.35rem 0.9rem;
+  padding: 0.35rem 1rem;
   color: var(--ink-soft);
   font-family: var(--mono);
   font-size: 0.66rem;
@@ -268,8 +267,7 @@ button.primary {
   background: var(--accent);
   color: var(--paper);
   border: 1px solid var(--accent-deep);
-  border-radius: 3px;
-  padding: 0.6rem 1.5rem;
+  padding: 0.6rem 1.6rem;
   font-family: var(--mono);
   font-weight: 600;
   font-size: 0.74rem;
@@ -297,6 +295,35 @@ button.primary:disabled { background: var(--ink-faint); border-color: var(--ink-
   background: var(--paper); color: var(--ink-soft); font-size: 12px;
 }
 
+/* ------------------------------------------------------- button polish */
+.card-actions button,
+.archive-tile-actions button,
+#add-photo,
+#add-form button,
+button.primary {
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px var(--shadow);
+  transition: transform 0.12s ease, box-shadow 0.12s ease,
+              color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+.card-actions button:hover,
+.archive-tile-actions button:hover,
+#add-photo:hover,
+#add-form button:hover,
+button.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px -2px var(--shadow), 0 1px 2px var(--shadow);
+}
+.card-actions button:active,
+.archive-tile-actions button:active,
+#add-photo:active,
+#add-form button:active,
+button.primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
 /* --------------------------------------------------------- card actions */
 .card-actions {
   display: flex;
@@ -308,8 +335,7 @@ button.primary:disabled { background: var(--ink-faint); border-color: var(--ink-
 .card-actions button {
   background: var(--paper);
   border: 1px solid var(--rule-strong);
-  border-radius: 3px;
-  padding: 0.42rem 1rem;
+  padding: 0.42rem 1.1rem;
   color: var(--ink-soft);
   font-family: var(--mono);
   font-size: 0.68rem;
@@ -505,7 +531,7 @@ button.primary:disabled { background: var(--ink-faint); border-color: var(--ink-
 .line-actions button {
   width: 20px; height: 20px;
   border: 1px solid var(--rule-strong);
-  border-radius: 2px;
+  border-radius: 50%;
   background: var(--paper);
   color: var(--ink-soft);
   font-size: 11px;
@@ -547,8 +573,7 @@ button.primary:disabled { background: var(--ink-faint); border-color: var(--ink-
   background: var(--ink);
   color: var(--paper);
   border: 1px solid var(--ink);
-  border-radius: 3px;
-  padding: 0.5rem 1.4rem;
+  padding: 0.5rem 1.5rem;
   font-family: var(--mono);
   font-weight: 600;
   font-size: 0.72rem;
@@ -617,7 +642,7 @@ footer .colophon { letter-spacing: 0.1em; text-transform: uppercase; font-size: 
 /* --------------------------------------------------------------- archive */
 .archive-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
   gap: 1rem;
 }
 .archive-tile {
@@ -662,16 +687,16 @@ footer .colophon { letter-spacing: 0.1em; text-transform: uppercase; font-size: 
 }
 .archive-tile-actions {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.45rem;
   margin-top: 0.5rem;
   border-top: 1px solid var(--rule);
-  padding-top: 0.6rem;
+  padding-top: 0.65rem;
 }
 .archive-tile-actions button {
   background: var(--paper);
   border: 1px solid var(--rule-strong);
-  border-radius: 3px;
-  padding: 0.28rem 0.75rem;
+  padding: 0.3rem 0.85rem;
   color: var(--ink-soft);
   font-family: var(--mono);
   font-size: 0.62rem;
